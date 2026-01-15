@@ -74,10 +74,34 @@ h1 {
     margin-top: 10px;
     color: #aaa;
 }
+
+/* 🏆 Leaderboard */
+#leaderboard {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #000;
+    border: 2px solid gold;
+    padding: 12px;
+    width: 220px;
+    font-size: 0.95rem;
+}
+
+#leaderboard h3 {
+    margin: 0 0 8px;
+    color: gold;
+    text-align: center;
+}
 </style>
 </head>
 
 <body>
+
+<div id="leaderboard">
+    <h3>🏆 Leaderboard</h3>
+    <div id="leaderboardList"></div>
+</div>
+
 <div id="app">
 
 <h1>🎰 NEON ROYAL JACKPOT 🎰</h1>
@@ -104,6 +128,15 @@ h1 {
 </div>
 
 <script>
+/* ───────── SPIELERNAME ───────── */
+let playerName = localStorage.getItem("player_name");
+if (!playerName) {
+    playerName = prompt("Willkommen! Bitte gib deinen Spielernamen ein:");
+    if (!playerName) playerName = "Gast";
+    localStorage.setItem("player_name", playerName);
+}
+
+/* ───────── SLOT LOGIK (UNVERÄNDERT) ───────── */
 const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","BAR","7️⃣","💎"];
 const JACKPOT_START = 5000;
 const MIN_BET = 10;
@@ -127,18 +160,26 @@ let data = JSON.parse(localStorage.getItem("slot_save")) || {
 
 function save() {
     localStorage.setItem("slot_save", JSON.stringify(data));
+    updateLeaderboard();
 }
 
 function updateUI() {
     document.getElementById("status").innerText =
-        `💰 Kontostand: ${data.balance} € | 🎯 Einsatz: ${data.bet} €`;
+        `👤 ${playerName} | 💰 ${data.balance} € | 🎯 Einsatz: ${data.bet} €`;
 
     document.getElementById("jackpot").innerText =
         `💎 JACKPOT: ${data.jackpot} €`;
 
-    let rtp = data.totalBet ? (data.totalWin / data.totalBet * 100).toFixed(2) : "0.00";
+    let rtp = data.totalBet
+        ? (data.totalWin / data.totalBet * 100).toFixed(2)
+        : "0.00";
+
     document.getElementById("stats").innerText =
         `Spins: ${data.spins} | RTP: ${rtp}%`;
+}
+
+function randomSym() {
+    return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
 }
 
 function casinoSpin() {
@@ -160,10 +201,6 @@ function casinoSpin() {
     }
 }
 
-function randomSym() {
-    return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-}
-
 function spin() {
     if (data.balance < data.bet) return;
 
@@ -176,11 +213,10 @@ function spin() {
 
     let count = 15;
     let interval = setInterval(() => {
-        document.getElementById("r1").innerText = randomSym();
-        document.getElementById("r2").innerText = randomSym();
-        document.getElementById("r3").innerText = randomSym();
-        count--;
-        if (count === 0) {
+        r1.innerText = randomSym();
+        r2.innerText = randomSym();
+        r3.innerText = randomSym();
+        if (--count === 0) {
             clearInterval(interval);
             finishSpin();
         }
@@ -190,17 +226,17 @@ function spin() {
 function finishSpin() {
     let [a,b,c,win] = casinoSpin();
 
-    document.getElementById("r1").innerText = a;
-    document.getElementById("r2").innerText = b;
-    document.getElementById("r3").innerText = c;
+    r1.innerText = a;
+    r2.innerText = b;
+    r3.innerText = c;
 
     if (win > 0) {
         data.balance += win;
         data.totalWin += win;
-        data.jackpot = (a === "💎") ? JACKPOT_START : data.jackpot;
-        document.getElementById("info").innerText = `🏆 GEWONNEN: +${win} €`;
+        if (a === "💎") data.jackpot = JACKPOT_START;
+        info.innerText = `🏆 GEWONNEN: +${win} €`;
     } else {
-        document.getElementById("info").innerText = "😢 Kein Gewinn";
+        info.innerText = "😢 Kein Gewinn";
     }
 
     save();
@@ -221,9 +257,32 @@ function setBet() {
 function allIn() {
     data.bet = data.balance;
     updateUI();
+    save();
+}
+
+/* ───────── LEADERBOARD ───────── */
+function updateLeaderboard() {
+    let board = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+    board = board.filter(p => p.name !== playerName);
+    board.push({ name: playerName, balance: data.balance });
+
+    board.sort((a,b) => b.balance - a.balance);
+    board = board.slice(0, 10);
+
+    localStorage.setItem("leaderboard", JSON.stringify(board));
+
+    const list = document.getElementById("leaderboardList");
+    list.innerHTML = "";
+    board.forEach((p, i) => {
+        list.innerHTML += `${i+1}. ${p.name}: ${p.balance} €<br>`;
+    });
 }
 
 updateUI();
+updateLeaderboard();
 </script>
 </body>
 </html>
+
+
