@@ -11,30 +11,21 @@
 <style>
 html, body {
     margin: 0;
-    padding: 0;
     background: #111;
     color: white;
     font-family: Arial;
-    height: 100%;
 }
 
 #app {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    text-align: center;
+    margin-top: 40px;
 }
-
-h1 { color: gold; font-size: 3rem; }
-
-.status { color: cyan; font-size: 1.2rem; }
-.jackpot { color: gold; font-size: 1.4rem; }
 
 .reels {
     display: flex;
+    justify-content: center;
     gap: 30px;
-    margin: 20px 0;
+    margin: 20px;
 }
 
 .reel {
@@ -43,10 +34,9 @@ h1 { color: gold; font-size: 3rem; }
     padding: 20px;
     border: 5px ridge gold;
     width: 100px;
-    text-align: center;
 }
 
-.controls button {
+button {
     font-size: 1.1rem;
     padding: 12px 18px;
     margin: 5px;
@@ -59,19 +49,11 @@ h1 { color: gold; font-size: 3rem; }
     position: fixed;
     top: 20px;
     right: 20px;
+    width: 440px;
     background: black;
     border: 3px solid gold;
     padding: 20px;
-    width: 440px;              
-    font-size: 1.2rem;   
-    line-height: 1.6;
-}
-
-
-#leaderboard h3 {
-    margin: 0 0 10px;
-    color: gold;
-    text-align: center;
+    font-size: 1.2rem;
 }
 </style>
 </head>
@@ -79,32 +61,29 @@ h1 { color: gold; font-size: 3rem; }
 <body>
 
 <div id="leaderboard">
-    <h3>🏆 Global</h3>
+    <h3>🏆 Global Leaderboard</h3>
     <div id="leaderboardList"></div>
 </div>
 
 <div id="app">
-<h1>🎰 NEON ROYAL JACKPOT 🎰</h1>
+    <h1 style="color:gold">🎰 NEON ROYAL JACKPOT 🎰</h1>
 
-<div class="status" id="status"></div>
-<div class="jackpot" id="jackpot"></div>
-<div class="status" id="timer"></div>
+    <div id="status"></div>
+    <div id="timer"></div>
 
-<div class="reels">
-    <div class="reel" id="r1">❔</div>
-    <div class="reel" id="r2">❔</div>
-    <div class="reel" id="r3">❔</div>
-</div>
+    <div class="reels">
+        <div class="reel" id="r1">❔</div>
+        <div class="reel" id="r2">❔</div>
+        <div class="reel" id="r3">❔</div>
+    </div>
 
-<div class="controls">
     <button onclick="setBet()">🎯 Einsatz</button>
     <button class="allin" onclick="allIn()">💥 ALL IN</button>
     <button class="spin" onclick="spin()">▶ SPIN</button>
 </div>
-</div>
 
 <script>
-/* ───── FIREBASE CONFIG ───── */
+/* ───── FIREBASE ───── */
 firebase.initializeApp({
   apiKey: "AIzaSyBqJub5JZstuXNlemSLc9HFziEs11gA70k",
   authDomain: "slot-site-dce13.firebaseapp.com",
@@ -122,49 +101,51 @@ if (!playerName) {
 /* ───── KONFIG ───── */
 const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
 const MIN_BET = 10;
-const JACKPOT_START = 5000;
 const INCOME_PER_MIN = 5;
 const INTERVAL = 60000;
 
+/* ───── SPIELER DATEN ───── */
 let data = {
     balance: 5000,
     bet: 10,
-    jackpot: JACKPOT_START,
     lastIncome: Date.now()
 };
 
-/* ───── SERVER SYNC ───── */
+/* ───── LOAD / SAVE ───── */
 async function loadPlayer() {
     const ref = db.collection("players").doc(playerName);
-    const doc = await ref.get();
+    const snap = await ref.get();
 
-    if (doc.exists) {
-        data = doc.data();
-        applyIncome();
+    if (snap.exists) {
+        data = snap.data();
     } else {
         await ref.set(data);
     }
     updateUI();
 }
 
-async function applyIncome() {
-    const now = Date.now();
-    const minutes = Math.floor((now - data.lastIncome) / INTERVAL);
-    if (minutes > 0) {
-        data.balance += minutes * INCOME_PER_MIN;
-        data.lastIncome += minutes * INTERVAL;
-        await savePlayer();
-    }
-}
-
 async function savePlayer() {
     await db.collection("players").doc(playerName).set(data);
 }
 
-/* ───── TIMER ───── */
-setInterval(() => {
-    const remaining = Math.max(0, INTERVAL - (Date.now() - data.lastIncome));
-    timer.innerText = `⏳ +5€ in ${Math.ceil(remaining/1000)}s`;
+/* ───── TIMER + INCOME ───── */
+setInterval(async () => {
+    const now = Date.now();
+    const diff = now - data.lastIncome;
+    const minutes = Math.floor(diff / INTERVAL);
+
+    if (minutes > 0) {
+        data.balance += minutes * INCOME_PER_MIN;
+        data.lastIncome += minutes * INTERVAL;
+        await savePlayer();
+        updateUI();
+        loadLeaderboard();
+    }
+
+    const sec = Math.ceil((INTERVAL - (now - data.lastIncome)) / 1000);
+    document.getElementById("timer").innerText =
+        `⏳ +${INCOME_PER_MIN}€ in ${sec}s`;
+
 }, 1000);
 
 /* ───── SLOT ───── */
@@ -172,7 +153,7 @@ function randomSym() {
     return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
 }
 
-function spin() {
+async function spin() {
     if (data.balance < data.bet) return;
     data.balance -= data.bet;
 
@@ -181,10 +162,10 @@ function spin() {
     r3.innerText = randomSym();
 
     if (Math.random() < 0.2) {
-        const win = data.bet * 5;
-        data.balance += win;
+        data.balance += data.bet * 5;
     }
-    savePlayer();
+
+    await savePlayer();
     updateUI();
     loadLeaderboard();
 }
@@ -203,13 +184,13 @@ function allIn() {
 /* ───── UI ───── */
 function updateUI() {
     status.innerText = `👤 ${playerName} | 💰 ${data.balance} € | 🎯 ${data.bet} €`;
-    jackpot.innerText = `💎 JACKPOT: ${data.jackpot} €`;
 }
 
 /* ───── LEADERBOARD ───── */
 async function loadLeaderboard() {
     const snap = await db.collection("players")
         .orderBy("balance","desc").limit(10).get();
+
     leaderboardList.innerHTML = "";
     snap.forEach((d,i)=>{
         leaderboardList.innerHTML += `${i+1}. ${d.id}: ${d.data().balance} €<br>`;
@@ -222,5 +203,3 @@ loadLeaderboard();
 </script>
 </body>
 </html>
-
-
