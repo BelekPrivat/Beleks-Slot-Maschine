@@ -5,235 +5,225 @@
 <title>🎰 Neon Royal Jackpot</title>
 
 <style>
-body {
+html, body {
     margin: 0;
+    padding: 0;
     background: #111;
     color: white;
     font-family: Arial, sans-serif;
-    overflow: hidden;
+    height: 100%;
 }
 
-#main {
-    text-align: center;
-    padding-top: 40px;
+#app {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
 }
 
 h1 {
     color: gold;
     font-size: 3rem;
+    margin-bottom: 10px;
 }
 
-#status, #jackpot {
-    font-size: 1.3rem;
-    margin: 10px;
+.status {
+    color: cyan;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.jackpot {
+    color: gold;
+    font-size: 1.4rem;
+    margin-bottom: 30px;
 }
 
 .reels {
     display: flex;
-    justify-content: center;
-    margin: 40px 0;
-    gap: 25px;
+    gap: 30px;
+    margin-bottom: 20px;
 }
 
 .reel {
     font-size: 5rem;
     background: black;
-    border: 6px ridge gold;
     padding: 20px;
-    width: 90px;
+    border: 5px ridge #555;
+    width: 100px;
+    text-align: center;
 }
 
-button {
+.info {
+    font-size: 1.2rem;
+    margin: 15px;
+}
+
+.controls button {
     font-size: 1.1rem;
-    padding: 12px 25px;
-    margin: 10px;
+    padding: 12px 18px;
+    margin: 5px;
     cursor: pointer;
 }
 
-#spin { background: green; color: white; }
-#allin { background: red; color: white; }
+.spin { background: green; color: white; }
+.allin { background: red; color: white; }
 
-#info {
-    margin-top: 15px;
-    font-size: 1.2rem;
-}
-
-#leaderboard {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    border: 2px solid gold;
-    padding: 10px;
-    width: 220px;
+.stats {
+    margin-top: 10px;
+    color: #aaa;
 }
 </style>
 </head>
 
 <body>
+<div id="app">
 
-<div id="leaderboard">
-    <h3>🏆 Leaderboard</h3>
-    <div id="leaderboardList"></div>
+<h1>🎰 NEON ROYAL JACKPOT 🎰</h1>
+
+<div class="status" id="status"></div>
+<div class="jackpot" id="jackpot"></div>
+
+<div class="reels">
+    <div class="reel" id="r1">❔</div>
+    <div class="reel" id="r2">❔</div>
+    <div class="reel" id="r3">❔</div>
 </div>
 
-<div id="main">
-    <h1>🎰 NEON ROYAL JACKPOT 🎰</h1>
-    <div id="status"></div>
-    <div id="jackpot"></div>
+<div class="info" id="info"></div>
 
-    <div class="reels">
-        <div class="reel" id="r1">❔</div>
-        <div class="reel" id="r2">❔</div>
-        <div class="reel" id="r3">❔</div>
-    </div>
+<div class="controls">
+    <button onclick="setBet()">🎯 Einsatz setzen</button>
+    <button class="allin" onclick="allIn()">💥 ALL IN</button>
+    <button class="spin" onclick="spin()">▶ SPIN</button>
+</div>
 
-    <button id="allin">💥 ALL IN</button>
-    <button id="spin">▶ SPIN</button>
+<div class="stats" id="stats"></div>
 
-    <div id="info"></div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// KONFIG
-// ─────────────────────────────────────────────
-
 const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","BAR","7️⃣","💎"];
-const START_BALANCE = 5000;
 const JACKPOT_START = 5000;
 const MIN_BET = 10;
 
-// ─────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────
-
-let playerName = localStorage.getItem("playerName");
-if (!playerName) {
-    playerName = prompt("👤 Spielername eingeben:") || "Gast";
-    localStorage.setItem("playerName", playerName);
-}
-
-let balance = Number(localStorage.getItem("balance")) || START_BALANCE;
-let bet = Number(localStorage.getItem("bet")) || MIN_BET;
-let jackpot = Number(localStorage.getItem("jackpot")) || JACKPOT_START;
-let spinning = false;
-
-// ─────────────────────────────────────────────
-// ELEMENTE
-// ─────────────────────────────────────────────
-
-const statusEl = document.getElementById("status");
-const jackpotEl = document.getElementById("jackpot");
-const infoEl = document.getElementById("info");
-const reels = [
-    document.getElementById("r1"),
-    document.getElementById("r2"),
-    document.getElementById("r3")
+const PAYOUT_TABLE = [
+    [0.70, 0],
+    [0.20, 2],
+    [0.08, 5],
+    [0.018, 20],
+    [0.002, "JACKPOT"]
 ];
-const leaderboardList = document.getElementById("leaderboardList");
 
-// ─────────────────────────────────────────────
-// FUNKTIONEN
-// ─────────────────────────────────────────────
+let data = JSON.parse(localStorage.getItem("slot_save")) || {
+    balance: 500,
+    bet: 10,
+    jackpot: JACKPOT_START,
+    spins: 0,
+    totalBet: 0,
+    totalWin: 0
+};
+
+function save() {
+    localStorage.setItem("slot_save", JSON.stringify(data));
+}
 
 function updateUI() {
-    statusEl.innerText = `👤 ${playerName} | 💰 ${balance} € | 🎯 Einsatz: ${bet} €`;
-    jackpotEl.innerText = `💎 JACKPOT: ${jackpot} €`;
+    document.getElementById("status").innerText =
+        `💰 Kontostand: ${data.balance} € | 🎯 Einsatz: ${data.bet} €`;
+
+    document.getElementById("jackpot").innerText =
+        `💎 JACKPOT: ${data.jackpot} €`;
+
+    let rtp = data.totalBet ? (data.totalWin / data.totalBet * 100).toFixed(2) : "0.00";
+    document.getElementById("stats").innerText =
+        `Spins: ${data.spins} | RTP: ${rtp}%`;
 }
 
-function saveGame() {
-    localStorage.setItem("balance", balance);
-    localStorage.setItem("bet", bet);
-    localStorage.setItem("jackpot", jackpot);
+function casinoSpin() {
+    let roll = Math.random();
+    let sum = 0;
+
+    for (let [chance, payout] of PAYOUT_TABLE) {
+        sum += chance;
+        if (roll <= sum) {
+            if (payout === 0)
+                return [randomSym(), randomSym(), randomSym(), 0];
+
+            if (payout === "JACKPOT")
+                return ["💎","💎","💎", data.jackpot];
+
+            let s = randomSym();
+            return [s, s, s, payout * data.bet];
+        }
+    }
 }
 
-function updateLeaderboard() {
-    let board = JSON.parse(localStorage.getItem("leaderboard") || "{}");
-    board[playerName] = Math.max(board[playerName] || 0, balance);
-    localStorage.setItem("leaderboard", JSON.stringify(board));
-
-    let sorted = Object.entries(board)
-        .sort((a,b) => b[1]-a[1])
-        .slice(0,10);
-
-    leaderboardList.innerHTML = sorted
-        .map((e,i)=>`${i+1}. ${e[0]}: ${e[1]} €`)
-        .join("<br>");
+function randomSym() {
+    return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
 }
 
 function spin() {
-    if (spinning || balance < bet) return;
-    spinning = true;
+    if (data.balance < data.bet) return;
 
-    balance -= bet;
-    jackpot += Math.floor(bet * 0.05);
-    infoEl.innerText = "🎲 Spinning...";
+    data.balance -= data.bet;
+    data.jackpot += Math.floor(data.bet * 0.05);
+    data.spins++;
+    data.totalBet += data.bet;
+
+    document.getElementById("info").innerText = "🎲 Spinning...";
 
     let count = 15;
-    let anim = setInterval(() => {
-        reels.forEach(r => r.innerText = SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]);
-        if (--count === 0) {
-            clearInterval(anim);
+    let interval = setInterval(() => {
+        document.getElementById("r1").innerText = randomSym();
+        document.getElementById("r2").innerText = randomSym();
+        document.getElementById("r3").innerText = randomSym();
+        count--;
+        if (count === 0) {
+            clearInterval(interval);
             finishSpin();
         }
     }, 70);
 }
 
 function finishSpin() {
-    let roll = Math.random();
-    let result = [];
-    let win = 0;
+    let [a,b,c,win] = casinoSpin();
 
-    if (roll < 0.002) {
-        result = ["💎","💎","💎"];
-        win = jackpot;
-        jackpot = JACKPOT_START;
-    } else if (roll < 0.02) {
-        result = ["7️⃣","7️⃣","7️⃣"];
-        win = bet * 20;
-    } else if (roll < 0.10) {
-        result = ["🔔","🔔","🔔"];
-        win = bet * 5;
-    } else if (roll < 0.30) {
-        result = ["🍒","🍒","🍒"];
-        win = bet * 2;
-    } else {
-        result = SYMBOLS.sort(()=>0.5-Math.random()).slice(0,3);
-    }
-
-    reels.forEach((r,i)=>r.innerText=result[i]);
+    document.getElementById("r1").innerText = a;
+    document.getElementById("r2").innerText = b;
+    document.getElementById("r3").innerText = c;
 
     if (win > 0) {
-        balance += win;
-        infoEl.innerText = `🏆 GEWONNEN: +${win} €`;
+        data.balance += win;
+        data.totalWin += win;
+        data.jackpot = (a === "💎") ? JACKPOT_START : data.jackpot;
+        document.getElementById("info").innerText = `🏆 GEWONNEN: +${win} €`;
     } else {
-        infoEl.innerText = "😢 Kein Gewinn";
+        document.getElementById("info").innerText = "😢 Kein Gewinn";
     }
 
-    saveGame();
+    save();
     updateUI();
-    updateLeaderboard();
-    spinning = false;
 }
 
-// ─────────────────────────────────────────────
-// EVENTS
-// ─────────────────────────────────────────────
+function setBet() {
+    let v = prompt("Einsatz festlegen:", data.bet);
+    if (!v) return;
+    v = parseInt(v);
+    if (v >= MIN_BET && v <= data.balance) {
+        data.bet = v;
+        updateUI();
+        save();
+    }
+}
 
-document.getElementById("spin").onclick = spin;
-document.getElementById("allin").onclick = () => {
-    bet = balance;
+function allIn() {
+    data.bet = data.balance;
     updateUI();
-    infoEl.innerText = "💥 ALL IN!";
-};
-
-// ─────────────────────────────────────────────
-// START
-// ─────────────────────────────────────────────
+}
 
 updateUI();
-updateLeaderboard();
 </script>
-
 </body>
 </html>
