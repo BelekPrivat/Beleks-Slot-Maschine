@@ -261,11 +261,31 @@ async function loadPlayer(){
     updateUI();
 }
 
-setInterval(()=>{
-    const now=Date.now();
-    const next=data.lastIncome+INTERVAL;
-    timer.innerText=`⏳ +5€ in ${Math.max(0,Math.ceil((next-now)/1000))}s`;
-},1000);
+setInterval(() => {
+    const now = Date.now();
+
+    // wie viele volle Minuten sind vergangen?
+    const passedMinutes = Math.floor((now - data.lastIncome) / INTERVAL);
+
+    if (passedMinutes > 0) {
+        const income = passedMinutes * INCOME_PER_MIN;
+        data.balance += income;
+        data.lastIncome += passedMinutes * INTERVAL;
+
+        savePlayer();
+        updateUI();
+        addWinLog(`⏳ Einkommen: +${income}€`, "win");
+    }
+
+    // saubere Countdown-Anzeige
+    const remaining = Math.max(
+        0,
+        INTERVAL - (now - data.lastIncome)
+    );
+
+    timer.innerText = `⏳ +5€ in ${Math.ceil(remaining / 1000)}s`;
+}, 1000);
+
 
 function randomSym(){ return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]; }
 
@@ -344,4 +364,5 @@ loadLeaderboard();
 
 </body>
 </html>
+
 
