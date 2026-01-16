@@ -78,6 +78,43 @@ h1 { color: gold; font-size: 3rem; }
 .section { margin-bottom: 25px; }
 .section h3 { color: gold; text-align: center; }
 
+/* =========================
+   🎰 LEADERBOARD DESIGN
+========================= */
+
+#leaderboardList {
+    background: linear-gradient(180deg, #111, #000);
+    border: 2px solid gold;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 1.1rem;
+}
+
+#leaderboardList div {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-bottom: 1px solid #333;
+}
+
+#leaderboardList div:last-child {
+    border-bottom: none;
+}
+
+#leaderboardList div:nth-child(1) {
+    color: gold;
+    font-weight: bold;
+    text-shadow: 0 0 8px gold;
+}
+
+#leaderboardList div:nth-child(2) {
+    color: silver;
+}
+
+#leaderboardList div:nth-child(3) {
+    color: #cd7f32; /* Bronze */
+}
+    
 #winLog {
     min-height: 320px;
     border: 1px solid gold;
@@ -85,15 +122,44 @@ h1 { color: gold; font-size: 3rem; }
     background: #111;
 }
 
+/* =========================
+   📊 PAYTABLE DESIGN
+========================= */
+
+#paytable {
+    background: radial-gradient(circle at top, #222, #000);
+    border: 2px solid gold;
+    border-radius: 15px;
+    padding: 15px;
+}
+
 #paytable table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 1.15rem;
 }
 
-#paytable td, #paytable th {
-    border: 1px solid gold;
-    padding: 6px;
+#paytable th {
+    color: gold;
+    padding: 10px;
+    border-bottom: 2px solid gold;
+    text-shadow: 0 0 5px gold;
+}
+
+#paytable td {
+    padding: 8px;
     text-align: center;
+    border-bottom: 1px solid #333;
+}
+
+#paytable tr:hover {
+    background: rgba(255,215,0,0.08);
+}
+
+#paytable tr:last-child td {
+    color: gold;
+    font-weight: bold;
+    text-shadow: 0 0 8px gold;
 }
 
 </style>
@@ -306,6 +372,7 @@ loadLeaderboard();
 
 </body>
 </html>
+
 
 
 
