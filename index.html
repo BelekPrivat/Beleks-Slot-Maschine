@@ -97,7 +97,7 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 }
 #leaderboardList div:last-child { border-bottom: none; }
 
-/* ===== 🎯 GEWINN LOG ===== */
+/* ===== GEWINN LOG ===== */
 #winLog {
     height: 320px;
     border: 2px solid gold;
@@ -108,7 +108,6 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     overflow-y: auto;
 }
 
-/* einzelne Log-Zeile */
 .log-entry {
     padding: 4px 6px;
     margin-bottom: 4px;
@@ -117,32 +116,28 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     animation: fadeIn 0.3s ease-in;
 }
 
-/* Gewinn */
 .log-win {
     color: #00ff7f;
     text-shadow: 0 0 6px rgba(0,255,127,0.6);
 }
 
-/* Verlust */
 .log-lose {
     color: #ff4c4c;
     text-shadow: 0 0 6px rgba(255,76,76,0.6);
 }
 
-/* Jackpot */
 .log-jackpot {
     color: gold;
     background: rgba(255,215,0,0.08);
     text-shadow: 0 0 10px gold;
 }
 
-/* kleine Animation */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== PAYTABLE KOMPAKT ===== */
+/* ===== PAYTABLE ===== */
 #paytable {
     background: radial-gradient(circle at top, #222, #000);
     border: 2px solid gold;
@@ -255,6 +250,7 @@ let jackpotValue = 5000;
 let winLog = [];
 let spinning = false;
 
+/* ===== JACKPOT LIVE ===== */
 jackpotRef.onSnapshot(doc=>{
     if(doc.exists){
         jackpotValue = doc.data().value;
@@ -262,6 +258,7 @@ jackpotRef.onSnapshot(doc=>{
     }
 });
 
+/* ===== SPIELER ===== */
 async function loadPlayer(){
     const ref = db.collection("players").doc(playerName);
     const doc = await ref.get();
@@ -274,16 +271,30 @@ function savePlayer(){
     db.collection("players").doc(playerName).set(data);
 }
 
-setInterval(()=>{
+/* ===== FIXED INCOME SYSTEM ===== */
+function processIncome(){
     const now = Date.now();
-    if(now - data.lastIncome >= INTERVAL){
-        data.balance += INCOME_PER_MIN;
-        data.lastIncome += INTERVAL;
-        savePlayer();
-    }
-    timer.innerText = `⏳ +5€ in ${Math.ceil((INTERVAL-(now-data.lastIncome))/1000)}s`;
-},1000);
+    const diff = now - data.lastIncome;
 
+    if(diff >= INTERVAL){
+        const minutes = Math.floor(diff / INTERVAL);
+        const income = minutes * INCOME_PER_MIN;
+
+        data.balance += income;
+        data.lastIncome += minutes * INTERVAL;
+
+        savePlayer();
+        updateUI();
+        addWinLog(`⏱️ Einkommen +${income}€`, "win");
+    }
+
+    const remain = INTERVAL - (now - data.lastIncome);
+    timer.innerText = `⏳ +5€ in ${Math.max(1, Math.ceil(remain/1000))}s`;
+}
+
+setInterval(processIncome, 1000);
+
+/* ===== SLOT ===== */
 function randomSym(){
     return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
 }
@@ -364,6 +375,7 @@ function allIn(){
     updateUI();
 }
 
+/* ===== LEADERBOARD ===== */
 async function loadLeaderboard(){
     const snap=await db.collection("players")
         .orderBy("balance","desc")
@@ -383,4 +395,3 @@ loadLeaderboard();
 
 </body>
 </html>
-
