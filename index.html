@@ -155,11 +155,11 @@ h1 { color: gold; font-size: 3rem; }
             <tr><th>Kombination</th><th>Gewinn</th></tr>
             <tr><td>🍒🍒🍒</td><td>x2</td></tr>
             <tr><td>🍋🍋🍋</td><td>x3</td></tr>
-            <tr><td>🍊🍊🍊</td><td>x4</td></tr>
-            <tr><td>🔔🔔🔔</td><td>x6</td></tr>
-            <tr><td>⭐⭐⭐</td><td>x8</td></tr>
-            <tr><td>7️⃣7️⃣7️⃣</td><td>x10</td></tr>
-            <tr><td>💎💎💎</td><td>x20</td></tr>
+            <tr><td>🍊🍊🍊</td><td>x5</td></tr>
+            <tr><td>🔔🔔🔔</td><td>x8</td></tr>
+            <tr><td>⭐⭐⭐</td><td>x10</td></tr>
+            <tr><td>7️⃣7️⃣7️⃣</td><td>x20</td></tr>
+            <tr><td>💎💎💎</td><td>JACKPOT!</td></tr>
         </table>
     </div>
 
@@ -177,7 +177,7 @@ const db = firebase.firestore();
 
 /* VARS */
 const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
-const PAYTABLE = { "🍒":2,"🍋":3,"🍊":4,"🔔":6,"⭐":8,"7️⃣":10,"💎":20 };
+const PAYTABLE = { "🍒":2,"🍋":3,"🍊":5,"🔔":8,"⭐":10,"7️⃣":20,"💎":20 };
 
 const INCOME_PER_MIN = 5;
 const INTERVAL = 60000;
@@ -285,6 +285,7 @@ loadLeaderboard();
 
 </body>
 </html>
+
 
 
 
