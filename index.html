@@ -8,35 +8,120 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-/* DESIGN UNVERÄNDERT */
-html,body{margin:0;padding:0;height:100%;background:#0f0f0f;color:white;font-family:Arial}
-#layout{display:flex;height:100vh}
-#app{width:55%;display:flex;flex-direction:column;align-items:center;justify-content:center}
-h1{color:gold;font-size:2.6rem;text-shadow:0 0 12px gold}
-.status{color:#00eaff}
-.jackpot{font-size:1.9rem;color:gold;font-weight:bold;text-shadow:0 0 15px gold}
-.reels{display:flex;gap:25px;margin:15px 0}
-.reel{width:95px;font-size:4.5rem;text-align:center;padding:18px;background:#000;border:5px ridge gold}
-.controls button{font-size:1.05rem;padding:10px 18px;margin:5px;border:none}
-.spin{background:#1fa91f;color:white}
-.allin{background:#c42020;color:white}
-.player-info{font-size:1.25rem;color:#00eaff}
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    color: white;
+    font-family: Arial;
+    height: 100%;
+}
 
-#right{width:45%;padding:12px;display:flex;flex-direction:column;gap:12px;background:#000;border-left:4px solid gold}
-.panel{background:linear-gradient(180deg,#151515,#050505);border:2px solid gold;border-radius:14px;padding:10px}
-.panel h3{text-align:center;color:gold;margin:4px 0 8px}
+#layout { display: flex; height: 100vh; }
 
-#leaderboardList div{display:flex;justify-content:space-between;padding:5px 6px;border-bottom:1px solid #333}
+/* ===== SPIEL ===== */
+#app {
+    width: 55%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
 
-#winLog{height:200px;overflow-y:auto}
-.log-entry{padding:5px 6px;margin-bottom:4px;border-radius:6px;font-weight:bold}
-.log-win{color:#00ff99}
-.log-lose{color:#ff5555}
-.log-jackpot{color:gold}
+h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
+.status { color: cyan; font-size: 1.1rem; }
 
-#paytable table{width:100%;border-collapse:collapse}
-#paytable th{color:gold;border-bottom:1px solid gold;padding:6px}
-#paytable td{padding:6px;text-align:center;border-bottom:1px solid #333}
+.jackpot {
+    color: gold;
+    font-size: 1.9rem;
+    font-weight: bold;
+    text-shadow: 0 0 10px gold;
+}
+
+.reels { display: flex; gap: 25px; margin: 15px 0; }
+
+.reel {
+    font-size: 4.5rem;
+    background: black;
+    padding: 18px;
+    border: 5px ridge gold;
+    width: 95px;
+    text-align: center;
+}
+
+.controls button {
+    font-size: 1.05rem;
+    padding: 10px 16px;
+    margin: 4px;
+}
+
+.spin { background: green; color: white; }
+.allin { background: red; color: white; }
+
+.player-info {
+    font-size: 1.25rem;
+    color: cyan;
+    margin-top: 8px;
+}
+
+/* ===== RECHTS ===== */
+#right {
+    width: 45%;
+    background: black;
+    border-left: 4px solid gold;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ===== LEADERBOARD ===== */
+#leaderboardList {
+    background: linear-gradient(180deg, #111, #000);
+    border: 2px solid gold;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+#leaderboardList div {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 6px;
+    border-bottom: 1px solid #333;
+}
+
+/* ===== GEWINN LOG ===== */
+#winLog {
+    height: 220px;
+    border: 2px solid gold;
+    border-radius: 10px;
+    padding: 8px;
+    background: linear-gradient(180deg, #111, #000);
+    overflow-y: auto;
+}
+
+.log-entry { padding: 4px; font-weight: bold; }
+.log-win { color: #00ff7f; }
+.log-lose { color: #ff4c4c; }
+.log-jackpot { color: gold; }
+
+/* ===== PAYTABLE ===== */
+#paytable {
+    border: 2px solid gold;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+#paytable table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#paytable th, #paytable td {
+    padding: 6px;
+    text-align: center;
+}
+#paytable th { color: gold; }
 </style>
 </head>
 
@@ -66,19 +151,16 @@ h1{color:gold;font-size:2.6rem;text-shadow:0 0 12px gold}
 </div>
 
 <div id="right">
-    <div class="panel">
-        <h3>🏆 Leaderboard</h3>
-        <div id="leaderboardList"></div>
-    </div>
 
-    <div class="panel">
-        <h3>🧾 Gewinne</h3>
-        <div id="winLog"></div>
-    </div>
+    <h3 style="text-align:center;color:gold;">🏆 Leaderboard</h3>
+    <div id="leaderboardList"></div>
 
-    <div class="panel" id="paytable">
+    <h3 style="text-align:center;color:gold;">🧾 Gewinne</h3>
+    <div id="winLog"></div>
+
+    <div id="paytable">
         <table>
-            <tr><th>Kombi</th><th>Gewinn</th></tr>
+            <tr><th>Kombi</th><th>Multiplikator</th></tr>
             <tr><td>🍒🍒🍒</td><td>x2</td></tr>
             <tr><td>🍋🍋🍋</td><td>x3</td></tr>
             <tr><td>🍊🍊🍊</td><td>x5</td></tr>
@@ -88,59 +170,51 @@ h1{color:gold;font-size:2.6rem;text-shadow:0 0 12px gold}
             <tr><td>💎💎💎</td><td>JACKPOT</td></tr>
         </table>
     </div>
+
 </div>
 </div>
 
 <script>
 firebase.initializeApp({
-  apiKey:"AIzaSyBqJub5JZstuXNlemSLc9HFziEs11gA70k",
-  authDomain:"slot-site-dce13.firebaseapp.com",
-  projectId:"slot-site-dce13"
+  apiKey: "AIzaSyBqJub5JZstuXNlemSLc9HFziEs11gA70k",
+  authDomain: "slot-site-dce13.firebaseapp.com",
+  projectId: "slot-site-dce13"
 });
 
-const db=firebase.firestore();
-const jackpotRef=db.collection("game").doc("jackpot");
+const db = firebase.firestore();
+const jackpotRef = db.collection("game").doc("jackpot");
 
-const SYMBOLS=["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
-const PAYTABLE={🍒:2,🍋:3,🍊:5,🔔:8,"⭐":10,"7️⃣":20};
+const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
+const PAYTABLE = { "🍒":2,"🍋":3,"🍊":5,"🔔":8,"⭐":10,"7️⃣":20 };
 
-const INCOME_PER_MIN=5;
-const INTERVAL=60000;
+const INCOME_PER_MIN = 5;
+const INTERVAL = 60000;
 
-let playerName=localStorage.getItem("player_name")||prompt("Spielername:");
-localStorage.setItem("player_name",playerName);
+const winLogEl = document.getElementById("winLog");
 
-let data={balance:5000,bet:10,lastIncome:Date.now()};
-let jackpotValue=5000;
-let spinning=false;
-let winLog=[];
+let playerName = localStorage.getItem("player_name") || prompt("Spielername:");
+localStorage.setItem("player_name", playerName);
 
-function log(text,type){
-    const cls="log-entry "+(type==="win"?"log-win":type==="lose"?"log-lose":"log-jackpot");
-    winLog.unshift(`<div class="${cls}">${text}</div>`);
-    winLog=winLog.slice(0,10);
-    winLogEl.innerHTML=winLog.join("");
-}
+let data = { balance: 5000, bet: 10, lastIncome: Date.now() };
+let jackpotValue = 5000;
+let winLog = [];
+let spinning = false;
 
+/* JACKPOT LIVE */
+jackpotRef.onSnapshot(d=>{
+    if(d.exists){ jackpotValue=d.data().value; updateUI(); }
+});
+
+/* PLAYER LOAD */
 async function loadPlayer(){
     const ref=db.collection("players").doc(playerName);
     const doc=await ref.get();
     if(doc.exists) data=doc.data();
-
-    // OFFLINE-INCOME SOFORT
-    const now=Date.now();
-    const diff=Math.floor((now-data.lastIncome)/INTERVAL);
-    if(diff>0){
-        const income=diff*INCOME_PER_MIN;
-        data.balance+=income;
-        data.lastIncome+=diff*INTERVAL;
-        log(`⏳ Einkommen +${income}€`,"win");
-    }
-
     await ref.set(data);
     updateUI();
 }
 
+/* TIMER + EINKOMMEN */
 setInterval(()=>{
     const now=Date.now();
     const diff=Math.floor((now-data.lastIncome)/INTERVAL);
@@ -152,11 +226,10 @@ setInterval(()=>{
         db.collection("players").doc(playerName).set(data);
         updateUI();
     }
-    const remaining=Math.max(0,INTERVAL-(now-data.lastIncome));
-    timer.innerText=`⏳ +5€ in ${Math.ceil(remaining/1000)}s`;
+    timer.innerText=`⏳ +5€ in ${Math.ceil((INTERVAL-(now-data.lastIncome))/1000)}s`;
 },1000);
 
-function randomSym(){return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]}
+function randomSym(){ return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]; }
 
 async function spin(){
     if(spinning||data.balance<data.bet) return;
@@ -176,12 +249,12 @@ async function spin(){
                 log(`💎 JACKPOT +${jackpotValue}€`,"jackpot");
                 jackpotValue=5000;
                 await jackpotRef.set({value:jackpotValue});
-            }else{
+            } else {
                 const win=data.bet*PAYTABLE[f1];
                 data.balance+=win;
                 log(`🎉 ${f1}${f2}${f3} +${win}€`,"win");
             }
-        }else log("❌ Kein Gewinn","lose");
+        } else log("❌ Kein Gewinn","lose");
 
         await db.collection("players").doc(playerName).set(data);
         updateUI();
@@ -194,8 +267,15 @@ function animate(r,f,d){
     const s=Date.now();
     const i=setInterval(()=>{
         r.innerText=randomSym();
-        if(Date.now()-s>=d){clearInterval(i);r.innerText=f;}
+        if(Date.now()-s>=d){ clearInterval(i); r.innerText=f; }
     },70);
+}
+
+function log(text,type){
+    const cls="log-entry "+(type==="win"?"log-win":type==="lose"?"log-lose":"log-jackpot");
+    winLog.unshift(`<div class="${cls}">${text}</div>`);
+    winLog=winLog.slice(0,10);
+    winLogEl.innerHTML=winLog.join("");
 }
 
 function updateUI(){
@@ -209,7 +289,7 @@ function setBet(){
     if(v>0&&v<=data.balance) data.bet=v;
     updateUI();
 }
-function allIn(){data.bet=data.balance;updateUI();}
+function allIn(){ data.bet=data.balance; updateUI(); }
 
 async function loadLeaderboard(){
     const s=await db.collection("players").orderBy("balance","desc").limit(10).get();
@@ -222,13 +302,10 @@ async function loadLeaderboard(){
     });
 }
 
-jackpotRef.onSnapshot(d=>{
-    if(d.exists){jackpotValue=d.data().value;updateUI();}
-});
-
 loadPlayer();
 loadLeaderboard();
 </script>
 
 </body>
 </html>
+
