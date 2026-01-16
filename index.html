@@ -78,10 +78,7 @@ h1 { color: gold; font-size: 3rem; }
 .section { margin-bottom: 25px; }
 .section h3 { color: gold; text-align: center; }
 
-/* =========================
-   🎰 LEADERBOARD DESIGN
-========================= */
-
+/* 🎰 LEADERBOARD */
 #leaderboardList {
     background: linear-gradient(180deg, #111, #000);
     border: 2px solid gold;
@@ -106,15 +103,9 @@ h1 { color: gold; font-size: 3rem; }
     font-weight: bold;
     text-shadow: 0 0 8px gold;
 }
+#leaderboardList div:nth-child(2) { color: silver; }
+#leaderboardList div:nth-child(3) { color: #cd7f32; }
 
-#leaderboardList div:nth-child(2) {
-    color: silver;
-}
-
-#leaderboardList div:nth-child(3) {
-    color: #cd7f32; /* Bronze */
-}
-    
 #winLog {
     min-height: 320px;
     border: 1px solid gold;
@@ -122,10 +113,7 @@ h1 { color: gold; font-size: 3rem; }
     background: #111;
 }
 
-/* =========================
-   📊 PAYTABLE DESIGN
-========================= */
-
+/* 📊 PAYTABLE */
 #paytable {
     background: radial-gradient(circle at top, #222, #000);
     border: 2px solid gold;
@@ -143,7 +131,6 @@ h1 { color: gold; font-size: 3rem; }
     color: gold;
     padding: 10px;
     border-bottom: 2px solid gold;
-    text-shadow: 0 0 5px gold;
 }
 
 #paytable td {
@@ -159,9 +146,7 @@ h1 { color: gold; font-size: 3rem; }
 #paytable tr:last-child td {
     color: gold;
     font-weight: bold;
-    text-shadow: 0 0 8px gold;
 }
-
 </style>
 </head>
 
@@ -203,21 +188,19 @@ h1 { color: gold; font-size: 3rem; }
     </div>
 
     <div class="section" id="paytable">
-    <h3>📊 Paytable</h3>
-    <table>
-        <tr><th>Kombination</th><th>Gewinn</th></tr>
-        <tr><td>🍒🍒🍒</td><td>x2</td></tr>
-        <tr><td>🍋🍋🍋</td><td>x3</td></tr>
-        <tr><td>🍊🍊🍊</td><td>x5</td></tr>
-        <tr><td>🔔🔔🔔</td><td>x8</td></tr>
-        <tr><td>⭐⭐⭐</td><td>x10</td></tr>
-        <tr><td>7️⃣7️⃣7️⃣</td><td>x20</td></tr>
-        <tr><td>💎💎💎</td><td>JACKPOT</td></tr>
-    </table>
+        <h3>📊 Paytable</h3>
+        <table>
+            <tr><th>Kombination</th><th>Gewinn</th></tr>
+            <tr><td>🍒🍒🍒</td><td>x2</td></tr>
+            <tr><td>🍋🍋🍋</td><td>x3</td></tr>
+            <tr><td>🍊🍊🍊</td><td>x5</td></tr>
+            <tr><td>🔔🔔🔔</td><td>x8</td></tr>
+            <tr><td>⭐⭐⭐</td><td>x10</td></tr>
+            <tr><td>7️⃣7️⃣7️⃣</td><td>x20</td></tr>
+            <tr><td>💎💎💎</td><td>JACKPOT</td></tr>
+        </table>
+    </div>
 </div>
-
-</div>
-
 </div>
 
 <script>
@@ -357,11 +340,15 @@ async function loadLeaderboard(){
         .orderBy("balance","desc")
         .limit(10)
         .get();
+
     leaderboardList.innerHTML="";
     let i=1;
     snap.forEach(d=>{
-        leaderboardList.innerHTML +=
-            `${i}. ${d.id}: ${d.data().balance} €<br>`;
+        leaderboardList.innerHTML += `
+            <div>
+                <span>${i}. ${d.id}</span>
+                <span>${d.data().balance} €</span>
+            </div>`;
         i++;
     });
 }
@@ -372,8 +359,3 @@ loadLeaderboard();
 
 </body>
 </html>
-
-
-
-
-
