@@ -16,9 +16,12 @@ html, body {
     font-family: Arial;
     height: 100%;
 }
-#layout { display: flex; height: 100vh; }
+#layout {
+    display: flex;
+    height: 100vh;
+}
 
-/* ===== SPIEL ===== */
+/* ===== SPIEL LINKS ===== */
 #app {
     width: 55%;
     display: flex;
@@ -73,12 +76,11 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     width: 45%;
     background: black;
     border-left: 4px solid gold;
-    padding: 15px;
-    overflow: hidden;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
-
-.section { margin-bottom: 15px; }
-.section h3 { color: gold; text-align: center; margin: 6px 0; }
 
 /* ===== LEADERBOARD ===== */
 #leaderboardList {
@@ -92,14 +94,14 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 #leaderboardList div {
     display: flex;
     justify-content: space-between;
-    padding: 5px 6px;
+    padding: 4px 6px;
     border-bottom: 1px solid #333;
 }
 #leaderboardList div:last-child { border-bottom: none; }
 
 /* ===== GEWINN LOG ===== */
 #winLog {
-    height: 320px;
+    height: 220px;
     border: 2px solid gold;
     border-radius: 10px;
     padding: 8px;
@@ -113,23 +115,14 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     margin-bottom: 4px;
     border-radius: 6px;
     font-weight: bold;
-    animation: fadeIn 0.3s ease-in;
+    animation: fadeIn 0.25s ease-in;
 }
 
-.log-win {
-    color: #00ff7f;
-    text-shadow: 0 0 6px rgba(0,255,127,0.6);
-}
-
-.log-lose {
-    color: #ff4c4c;
-    text-shadow: 0 0 6px rgba(255,76,76,0.6);
-}
-
+.log-win { color: #00ff7f; }
+.log-lose { color: #ff4c4c; }
 .log-jackpot {
     color: gold;
     background: rgba(255,215,0,0.08);
-    text-shadow: 0 0 10px gold;
 }
 
 @keyframes fadeIn {
@@ -139,6 +132,7 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 
 /* ===== PAYTABLE ===== */
 #paytable {
+    height: 220px;
     background: radial-gradient(circle at top, #222, #000);
     border: 2px solid gold;
     border-radius: 12px;
@@ -162,11 +156,6 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     text-align: center;
     border-bottom: 1px solid #333;
 }
-
-#paytable tr:last-child td {
-    color: gold;
-    font-weight: bold;
-}
 </style>
 </head>
 
@@ -174,9 +163,9 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 
 <div id="layout">
 
+<!-- SPIEL -->
 <div id="app">
     <h1>🎰 Belek´s Slot-Maschine</h1>
-
     <div id="status" class="status"></div>
     <div id="jackpot" class="jackpot">💎 JACKPOT: 5000 €</div>
     <div id="timer" class="status"></div>
@@ -196,19 +185,20 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     <div id="playerInfo" class="player-info"></div>
 </div>
 
+<!-- RECHTS -->
 <div id="right">
 
-    <div class="section">
-        <h3>🏆 Leaderboard</h3>
+    <div>
+        <h3 style="text-align:center;color:gold;">🏆 Leaderboard</h3>
         <div id="leaderboardList"></div>
     </div>
 
-    <div class="section">
-        <h3>🧾 Gewinne</h3>
+    <div>
+        <h3 style="text-align:center;color:gold;">🧾 Gewinne</h3>
         <div id="winLog"></div>
     </div>
 
-    <div class="section" id="paytable">
+    <div id="paytable">
         <table>
             <tr><th>Kombi</th><th>x</th></tr>
             <tr><td>🍒🍒🍒</td><td>2</td></tr>
@@ -250,110 +240,79 @@ let jackpotValue = 5000;
 let winLog = [];
 let spinning = false;
 
-/* ===== JACKPOT LIVE ===== */
-jackpotRef.onSnapshot(doc=>{
-    if(doc.exists){
-        jackpotValue = doc.data().value;
+/* LIVE JACKPOT */
+jackpotRef.onSnapshot(d=>{
+    if(d.exists){
+        jackpotValue=d.data().value;
         updateUI();
     }
 });
 
-/* ===== SPIELER ===== */
+/* OFFLINE-INCOME FIX */
 async function loadPlayer(){
-    const ref = db.collection("players").doc(playerName);
-    const doc = await ref.get();
-    if(doc.exists) data = doc.data();
-    else await ref.set(data);
+    const ref=db.collection("players").doc(playerName);
+    const doc=await ref.get();
+    if(doc.exists) data=doc.data();
+
+    const now=Date.now();
+    const diff=Math.floor((now-data.lastIncome)/INTERVAL);
+    if(diff>0){
+        data.balance+=diff*INCOME_PER_MIN;
+        data.lastIncome+=diff*INTERVAL;
+    }
+    await ref.set(data);
     updateUI();
 }
 
-function savePlayer(){
-    db.collection("players").doc(playerName).set(data);
-}
+setInterval(()=>{
+    const now=Date.now();
+    const next=data.lastIncome+INTERVAL;
+    timer.innerText=`⏳ +5€ in ${Math.max(0,Math.ceil((next-now)/1000))}s`;
+},1000);
 
-/* ===== FIXED INCOME SYSTEM ===== */
-function processIncome(){
-    const now = Date.now();
-    const diff = now - data.lastIncome;
-
-    if(diff >= INTERVAL){
-        const minutes = Math.floor(diff / INTERVAL);
-        const income = minutes * INCOME_PER_MIN;
-
-        data.balance += income;
-        data.lastIncome += minutes * INTERVAL;
-
-        savePlayer();
-        updateUI();
-        addWinLog(`⏱️ Einkommen +${income}€`, "win");
-    }
-
-    const remain = INTERVAL - (now - data.lastIncome);
-    timer.innerText = `⏳ +5€ in ${Math.max(1, Math.ceil(remain/1000))}s`;
-}
-
-setInterval(processIncome, 1000);
-
-/* ===== SLOT ===== */
-function randomSym(){
-    return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
-}
+function randomSym(){ return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]; }
 
 async function spin(){
-    if(spinning || data.balance < data.bet) return;
-    spinning = true;
+    if(spinning||data.balance<data.bet) return;
+    spinning=true;
 
-    data.balance -= data.bet;
-    jackpotValue += data.bet;
-    await jackpotRef.set({ value: jackpotValue });
+    data.balance-=data.bet;
+    jackpotValue+=data.bet;
+    await jackpotRef.set({value:jackpotValue});
 
-    const f1=randomSym(), f2=randomSym(), f3=randomSym();
-
-    animateReel(r1,f1,700);
-    animateReel(r2,f2,900);
-    animateReel(r3,f3,1100);
+    const f1=randomSym(),f2=randomSym(),f3=randomSym();
+    animate(r1,f1,600); animate(r2,f2,800); animate(r3,f3,1000);
 
     setTimeout(async()=>{
-        if(f1===f2 && f2===f3){
+        if(f1===f2&&f2===f3){
             if(f1==="💎"){
-                data.balance += jackpotValue;
-                addWinLog(`💎 JACKPOT +${jackpotValue}€`, "jackpot");
-                jackpotValue = 5000;
-                await jackpotRef.set({ value: jackpotValue });
+                data.balance+=jackpotValue;
+                log(`💎 JACKPOT +${jackpotValue}€`,"jackpot");
+                jackpotValue=5000;
+                await jackpotRef.set({value:jackpotValue});
             } else {
-                const win = data.bet * PAYTABLE[f1];
-                data.balance += win;
-                addWinLog(`🎉 ${f1}${f2}${f3} +${win}€`, "win");
+                const win=data.bet*PAYTABLE[f1];
+                data.balance+=win;
+                log(`🎉 ${f1}${f2}${f3} +${win}€`,"win");
             }
-        } else {
-            addWinLog("❌ Kein Gewinn", "lose");
-        }
+        } else log("❌ Kein Gewinn","lose");
 
-        savePlayer();
-        updateUI();
-        loadLeaderboard();
-        spinning=false;
-    },1200);
+        await db.collection("players").doc(playerName).set(data);
+        updateUI(); loadLeaderboard(); spinning=false;
+    },1100);
 }
 
-function animateReel(r,f,d){
+function animate(r,f,d){
     const s=Date.now();
     const i=setInterval(()=>{
         r.innerText=randomSym();
-        if(Date.now()-s>=d){
-            clearInterval(i);
-            r.innerText=f;
-        }
+        if(Date.now()-s>=d){ clearInterval(i); r.innerText=f; }
     },70);
 }
 
-function addWinLog(text,type){
-    let cls="log-entry ";
-    if(type==="win") cls+="log-win";
-    else if(type==="lose") cls+="log-lose";
-    else cls+="log-jackpot";
-
-    winLog.unshift(`<div class="${cls}">${text}</div>`);
+function log(t,type){
+    let c="log-entry "+(type==="win"?"log-win":type==="lose"?"log-lose":"log-jackpot");
+    winLog.unshift(`<div class="${c}">${t}</div>`);
     winLog=winLog.slice(0,10);
     winLogEl.innerHTML=winLog.join("");
 }
@@ -366,23 +325,16 @@ function updateUI(){
 
 function setBet(){
     const v=parseInt(prompt("Einsatz:",data.bet));
-    if(v>0 && v<=data.balance) data.bet=v;
+    if(v>0&&v<=data.balance) data.bet=v;
     updateUI();
 }
+function allIn(){ data.bet=data.balance; updateUI(); }
 
-function allIn(){
-    data.bet=data.balance;
-    updateUI();
-}
-
-/* ===== LEADERBOARD ===== */
 async function loadLeaderboard(){
-    const snap=await db.collection("players")
-        .orderBy("balance","desc")
-        .limit(10).get();
+    const s=await db.collection("players").orderBy("balance","desc").limit(10).get();
     leaderboardList.innerHTML="";
     let i=1;
-    snap.forEach(d=>{
+    s.forEach(d=>{
         leaderboardList.innerHTML+=
         `<div><span>${i}. ${d.id}</span><span>${d.data().balance} €</span></div>`;
         i++;
@@ -395,177 +347,3 @@ loadLeaderboard();
 
 </body>
 </html>
-
-
-<script>
-firebase.initializeApp({
-  apiKey: "AIzaSyBqJub5JZstuXNlemSLc9HFziEs11gA70k",
-  authDomain: "slot-site-dce13.firebaseapp.com",
-  projectId: "slot-site-dce13"
-});
-
-const db = firebase.firestore();
-const jackpotRef = db.collection("game").doc("jackpot");
-
-const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
-const PAYTABLE = { "🍒":2,"🍋":3,"🍊":5,"🔔":8,"⭐":10,"7️⃣":20 };
-
-const INCOME_PER_MIN = 5;
-const INTERVAL = 60000;
-
-const winLogEl = document.getElementById("winLog");
-
-let playerName = localStorage.getItem("player_name") || prompt("Spielername:");
-localStorage.setItem("player_name", playerName);
-
-let data = { balance: 5000, bet: 10, lastIncome: Date.now() };
-let jackpotValue = 5000;
-let winLog = [];
-let spinning = false;
-
-/* ===== JACKPOT LIVE ===== */
-jackpotRef.onSnapshot(doc=>{
-    if(doc.exists){
-        jackpotValue = doc.data().value;
-        updateUI();
-    }
-});
-
-/* ===== SPIELER ===== */
-async function loadPlayer(){
-    const ref = db.collection("players").doc(playerName);
-    const doc = await ref.get();
-    if(doc.exists) data = doc.data();
-    else await ref.set(data);
-    updateUI();
-}
-
-function savePlayer(){
-    db.collection("players").doc(playerName).set(data);
-}
-
-/* ===== FIXED INCOME SYSTEM ===== */
-function processIncome(){
-    const now = Date.now();
-    const diff = now - data.lastIncome;
-
-    if(diff >= INTERVAL){
-        const minutes = Math.floor(diff / INTERVAL);
-        const income = minutes * INCOME_PER_MIN;
-
-        data.balance += income;
-        data.lastIncome += minutes * INTERVAL;
-
-        savePlayer();
-        updateUI();
-        addWinLog(`⏱️ Einkommen +${income}€`, "win");
-    }
-
-    const remain = INTERVAL - (now - data.lastIncome);
-    timer.innerText = `⏳ +5€ in ${Math.max(1, Math.ceil(remain/1000))}s`;
-}
-
-setInterval(processIncome, 1000);
-
-/* ===== SLOT ===== */
-function randomSym(){
-    return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
-}
-
-async function spin(){
-    if(spinning || data.balance < data.bet) return;
-    spinning = true;
-
-    data.balance -= data.bet;
-    jackpotValue += data.bet;
-    await jackpotRef.set({ value: jackpotValue });
-
-    const f1=randomSym(), f2=randomSym(), f3=randomSym();
-
-    animateReel(r1,f1,700);
-    animateReel(r2,f2,900);
-    animateReel(r3,f3,1100);
-
-    setTimeout(async()=>{
-        if(f1===f2 && f2===f3){
-            if(f1==="💎"){
-                data.balance += jackpotValue;
-                addWinLog(`💎 JACKPOT +${jackpotValue}€`, "jackpot");
-                jackpotValue = 5000;
-                await jackpotRef.set({ value: jackpotValue });
-            } else {
-                const win = data.bet * PAYTABLE[f1];
-                data.balance += win;
-                addWinLog(`🎉 ${f1}${f2}${f3} +${win}€`, "win");
-            }
-        } else {
-            addWinLog("❌ Kein Gewinn", "lose");
-        }
-
-        savePlayer();
-        updateUI();
-        loadLeaderboard();
-        spinning=false;
-    },1200);
-}
-
-function animateReel(r,f,d){
-    const s=Date.now();
-    const i=setInterval(()=>{
-        r.innerText=randomSym();
-        if(Date.now()-s>=d){
-            clearInterval(i);
-            r.innerText=f;
-        }
-    },70);
-}
-
-function addWinLog(text,type){
-    let cls="log-entry ";
-    if(type==="win") cls+="log-win";
-    else if(type==="lose") cls+="log-lose";
-    else cls+="log-jackpot";
-
-    winLog.unshift(`<div class="${cls}">${text}</div>`);
-    winLog=winLog.slice(0,10);
-    winLogEl.innerHTML=winLog.join("");
-}
-
-function updateUI(){
-    status.innerText=`👤 ${playerName}`;
-    jackpot.innerText=`💎 JACKPOT: ${jackpotValue} €`;
-    playerInfo.innerText=`💰 ${data.balance} € | 🎯 Einsatz ${data.bet} €`;
-}
-
-function setBet(){
-    const v=parseInt(prompt("Einsatz:",data.bet));
-    if(v>0 && v<=data.balance) data.bet=v;
-    updateUI();
-}
-
-function allIn(){
-    data.bet=data.balance;
-    updateUI();
-}
-
-/* ===== LEADERBOARD ===== */
-async function loadLeaderboard(){
-    const snap=await db.collection("players")
-        .orderBy("balance","desc")
-        .limit(10).get();
-    leaderboardList.innerHTML="";
-    let i=1;
-    snap.forEach(d=>{
-        leaderboardList.innerHTML+=
-        `<div><span>${i}. ${d.id}</span><span>${d.data().balance} €</span></div>`;
-        i++;
-    });
-}
-
-loadPlayer();
-loadLeaderboard();
-</script>
-
-</body>
-</html>
-
