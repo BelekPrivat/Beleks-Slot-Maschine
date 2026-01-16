@@ -16,12 +16,13 @@ html, body {
     font-family: Arial;
     height: 100%;
 }
+
 #layout {
     display: flex;
     height: 100vh;
 }
 
-/* ===== SPIEL LINKS ===== */
+/* ===== SPIEL ===== */
 #app {
     width: 55%;
     display: flex;
@@ -83,12 +84,15 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 }
 
 /* ===== LEADERBOARD ===== */
+#leaderboardBox {
+    flex: 0 0 30%;
+}
+
 #leaderboardList {
     background: linear-gradient(180deg, #111, #000);
     border: 2px solid gold;
     border-radius: 12px;
     padding: 10px;
-    font-size: 1.05rem;
 }
 
 #leaderboardList div {
@@ -100,59 +104,54 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 #leaderboardList div:last-child { border-bottom: none; }
 
 /* ===== GEWINN LOG ===== */
+#winBox {
+    flex: 0 0 35%;
+}
+
 #winLog {
-    height: 220px;
+    height: 100%;
     border: 2px solid gold;
     border-radius: 10px;
     padding: 8px;
     background: linear-gradient(180deg, #111, #000);
-    font-size: 0.95rem;
     overflow-y: auto;
+    font-size: 1rem;
 }
 
 .log-entry {
-    padding: 4px 6px;
-    margin-bottom: 4px;
+    padding: 5px 6px;
+    margin-bottom: 5px;
     border-radius: 6px;
     font-weight: bold;
-    animation: fadeIn 0.25s ease-in;
 }
 
 .log-win { color: #00ff7f; }
 .log-lose { color: #ff4c4c; }
-.log-jackpot {
-    color: gold;
-    background: rgba(255,215,0,0.08);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+.log-jackpot { color: gold; }
 
 /* ===== PAYTABLE ===== */
 #paytable {
-    height: 220px;
+    flex: 1;
     background: radial-gradient(circle at top, #222, #000);
     border: 2px solid gold;
     border-radius: 12px;
-    padding: 8px;
+    padding: 10px;
 }
 
 #paytable table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
 }
 
 #paytable th {
     color: gold;
-    padding: 4px;
+    padding: 6px;
     border-bottom: 1px solid gold;
 }
 
 #paytable td {
-    padding: 4px;
+    padding: 6px;
     text-align: center;
     border-bottom: 1px solid #333;
 }
@@ -163,11 +162,10 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
 
 <div id="layout">
 
-<!-- SPIEL -->
 <div id="app">
     <h1>🎰 Belek´s Slot-Maschine</h1>
     <div id="status" class="status"></div>
-    <div id="jackpot" class="jackpot">💎 JACKPOT: 5000 €</div>
+    <div id="jackpot" class="jackpot"></div>
     <div id="timer" class="status"></div>
 
     <div class="reels">
@@ -185,29 +183,28 @@ h1 { color: gold; font-size: 2.6rem; margin-bottom: 5px; }
     <div id="playerInfo" class="player-info"></div>
 </div>
 
-<!-- RECHTS -->
 <div id="right">
 
-    <div>
+    <div id="leaderboardBox">
         <h3 style="text-align:center;color:gold;">🏆 Leaderboard</h3>
         <div id="leaderboardList"></div>
     </div>
 
-    <div>
+    <div id="winBox">
         <h3 style="text-align:center;color:gold;">🧾 Gewinne</h3>
         <div id="winLog"></div>
     </div>
 
     <div id="paytable">
         <table>
-            <tr><th>Kombi</th><th>x</th></tr>
-            <tr><td>🍒🍒🍒</td><td>2</td></tr>
-            <tr><td>🍋🍋🍋</td><td>3</td></tr>
-            <tr><td>🍊🍊🍊</td><td>5</td></tr>
-            <tr><td>🔔🔔🔔</td><td>8</td></tr>
-            <tr><td>⭐⭐⭐</td><td>10</td></tr>
-            <tr><td>7️⃣7️⃣7️⃣</td><td>20</td></tr>
-            <tr><td>💎💎💎</td><td>JP</td></tr>
+            <tr><th>Kombi</th><th>Multiplikator</th></tr>
+            <tr><td>🍒🍒🍒</td><td>x2</td></tr>
+            <tr><td>🍋🍋🍋</td><td>x3</td></tr>
+            <tr><td>🍊🍊🍊</td><td>x5</td></tr>
+            <tr><td>🔔🔔🔔</td><td>x8</td></tr>
+            <tr><td>⭐⭐⭐</td><td>x10</td></tr>
+            <tr><td>7️⃣7️⃣7️⃣</td><td>x20</td></tr>
+            <tr><td>💎💎💎</td><td>JACKPOT</td></tr>
         </table>
     </div>
 
@@ -347,3 +344,4 @@ loadLeaderboard();
 
 </body>
 </html>
+
