@@ -22,7 +22,7 @@ h1{color:gold;font-size:2.6rem}
 .controls button{padding:10px 16px;margin:4px;font-size:1.05rem}
 .spin{background:green;color:white}
 .allin{background:red;color:white}
-.modbtn{background:#444;color:gold}
+.modbtn{background:#333;color:gold}
 
 .player-info{font-size:1.25rem;color:cyan;margin-top:8px}
 
@@ -88,9 +88,9 @@ h1{color:gold;font-size:2.6rem}
 #modMenu{
  background:#111;
  border:3px solid gold;
- border-radius:15px;
- padding:20px;
- width:340px;
+ border-radius:14px;
+ padding:18px;
+ width:320px;
  text-align:center
 }
 
@@ -101,7 +101,12 @@ h1{color:gold;font-size:2.6rem}
  font-size:1rem
 }
 
-#modMenu button{background:#222;color:gold;border:1px solid gold}
+#modMenu button{
+ background:#222;
+ color:gold;
+ border:1px solid gold;
+ cursor:pointer
+}
 </style>
 </head>
 
@@ -145,9 +150,9 @@ h1{color:gold;font-size:2.6rem}
 <button onclick="loginMod()">Login</button>
 
 <div id="modActions" style="display:none">
-<button onclick="resetGame()">🔄 Spiel resetten</button>
-<button onclick="setJackpot()">💎 Jackpot setzen</button>
-<button onclick="setMoney()">💰 Geld geben/nehmen</button>
+<button onclick="modReset()">🔄 Spiel resetten</button>
+<button onclick="modSetJackpot()">💎 Jackpot setzen</button>
+<button onclick="modSetMoney()">💰 Geld geben / nehmen</button>
 <button onclick="closeMod()">❌ Schließen</button>
 </div>
 </div>
@@ -161,124 +166,139 @@ firebase.initializeApp({
  projectId:"slot-site-dce13"
 });
 
-const db=firebase.firestore();
-const jackpotRef=db.collection("game").doc("jackpot");
+const db = firebase.firestore();
+const jackpotRef = db.collection("game").doc("jackpot");
 
 /* ===== CONFIG ===== */
-const MOD_PASSWORD="admin123";
-const SYMBOLS=["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
-const PAYTABLE={"🍒":5,"🍋":7,"🍊":10,"🔔":15,"⭐":25,"7️⃣":50};
+const MOD_PASSWORD = "admin123";
+const SYMBOLS = ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
+const PAYTABLE = {"🍒":5,"🍋":7,"🍊":10,"🔔":15,"⭐":25,"7️⃣":50};
 
-let playerName=localStorage.getItem("player_name")||prompt("Spielername:");
-localStorage.setItem("player_name",playerName);
+let playerName = localStorage.getItem("player_name") || prompt("Spielername:");
+localStorage.setItem("player_name", playerName);
 
-let data={balance:5000,bet:50,lastIncome:Date.now()};
-let jackpotValue=5000;
-let spinning=false;
-let winLog=[];
+let data = { balance:5000, bet:50, lastIncome:Date.now() };
+let jackpotValue = 5000;
+let spinning = false;
+let winLog = [];
 
-/* ===== MOD MENU ===== */
-function openMod(){modOverlay.style.display="flex"}
-function closeMod(){modOverlay.style.display="none"}
+/* ===== MOD MENU (ISOLIERT) ===== */
+function openMod(){ modOverlay.style.display="flex"; }
+function closeMod(){ modOverlay.style.display="none"; }
 
 function loginMod(){
- if(modPass.value===MOD_PASSWORD){
+ if(modPass.value === MOD_PASSWORD){
   modActions.style.display="block";
   modPass.style.display="none";
- }else alert("Falsches Passwort");
+ } else alert("Falsches Passwort");
 }
 
-async function resetGame(){
- if(!confirm("ALLES resetten?")) return;
- const players=await db.collection("players").get();
- players.forEach(d=>d.ref.delete());
- jackpotValue=5000;
+async function modReset(){
+ if(!confirm("Wirklich ALLES resetten?")) return;
+
+ const players = await db.collection("players").get();
+ players.forEach(p => p.ref.delete());
+
+ jackpotValue = 5000;
  await jackpotRef.set({value:5000});
  alert("Reset abgeschlossen");
 }
 
-async function setJackpot(){
- const v=parseInt(prompt("Neuer Jackpot:"));
+async function modSetJackpot(){
+ const v = parseInt(prompt("Neuer Jackpot:"));
  if(!isNaN(v)){
-  jackpotValue=v;
+  jackpotValue = v;
   await jackpotRef.set({value:v});
  }
 }
 
-async function setMoney(){
- const target=prompt("Spielername:");
- const amount=parseInt(prompt("Betrag (+/-):"));
- if(!target||isNaN(amount)) return;
- const ref=db.collection("players").doc(target);
- const doc=await ref.get();
+async function modSetMoney(){
+ const target = prompt("Spielername:");
+ const amount = parseInt(prompt("Betrag (+ / -):"));
+ if(!target || isNaN(amount)) return;
+
+ const ref = db.collection("players").doc(target);
+ const doc = await ref.get();
  if(doc.exists){
-  ref.update({balance:doc.data().balance+amount});
+  await ref.update({ balance: doc.data().balance + amount });
  }
 }
 
 /* ===== GAME ===== */
-function randomSym(){return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]}
+function randomSym(){
+ return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+}
 
 async function spin(){
- if(spinning||data.balance<data.bet) return;
- spinning=true;
- data.balance-=data.bet;
- jackpotValue+=data.bet;
+ if(spinning || data.balance < data.bet) return;
+ spinning = true;
+
+ data.balance -= data.bet;
+ jackpotValue += data.bet;
  await jackpotRef.set({value:jackpotValue});
 
- const f1=randomSym(),f2=randomSym(),f3=randomSym();
- animate(r1,f1,600);animate(r2,f2,800);animate(r3,f3,1000);
+ const f1=randomSym(), f2=randomSym(), f3=randomSym();
+ animate(r1,f1,600); animate(r2,f2,800); animate(r3,f3,1000);
 
- setTimeout(async()=>{
-  if(f1===f2&&f2===f3){
+ setTimeout(async ()=>{
+  if(f1===f2 && f2===f3){
    if(f1==="💎"){
-    data.balance+=jackpotValue;
+    data.balance += jackpotValue;
     log(`💎 JACKPOT +${jackpotValue}€`,"jackpot");
-    jackpotValue=5000;
+    jackpotValue = 5000;
     await jackpotRef.set({value:5000});
-   }else{
-    const win=data.bet*PAYTABLE[f1];
-    data.balance+=win;
+   } else {
+    const win = data.bet * PAYTABLE[f1];
+    data.balance += win;
     log(`🎉 ${f1}${f2}${f3} +${win}€`,"win");
    }
-  }else log("❌ Kein Gewinn","lose");
+  } else log("❌ Kein Gewinn","lose");
 
   await db.collection("players").doc(playerName).set(data,{merge:true});
   updateUI();
-  spinning=false;
+  spinning = false;
  },1100);
 }
 
 function animate(r,f,d){
- const s=Date.now();
- const i=setInterval(()=>{
-  r.innerText=randomSym();
-  if(Date.now()-s>=d){clearInterval(i);r.innerText=f}
+ const start = Date.now();
+ const i = setInterval(()=>{
+  r.innerText = randomSym();
+  if(Date.now()-start>=d){
+   clearInterval(i);
+   r.innerText = f;
+  }
  },70);
 }
 
-function log(t,type){
- const c="log-entry "+(type==="win"?"log-win":type==="lose"?"log-lose":"log-jackpot");
- winLog.unshift(`<div class="${c}">${t}</div>`);
- winLog=winLog.slice(0,12);
- winLogEl.innerHTML=winLog.join("");
+function log(text,type){
+ const cls="log-entry "+(type==="win"?"log-win":type==="lose"?"log-lose":"log-jackpot");
+ winLog.unshift(`<div class="${cls}">${text}</div>`);
+ winLog = winLog.slice(0,12);
+ winLogEl.innerHTML = winLog.join("");
 }
 
 function updateUI(){
- status.innerText=`👤 ${playerName}`;
- jackpot.innerText=`💎 JACKPOT: ${jackpotValue} €`;
- playerInfo.innerText=`💰 ${data.balance} € | 🎯 Einsatz ${data.bet} €`;
+ status.innerText = `👤 ${playerName}`;
+ jackpot.innerText = `💎 JACKPOT: ${jackpotValue} €`;
+ playerInfo.innerText = `💰 ${data.balance} € | 🎯 Einsatz ${data.bet} €`;
 }
 
 function setBet(){
- const v=parseInt(prompt("Einsatz:",data.bet));
- if(v>=50&&v<=data.balance) data.bet=v;
+ const v = parseInt(prompt("Einsatz:", data.bet));
+ if(v>=50 && v<=data.balance) data.bet=v;
  updateUI();
 }
-function allIn(){data.bet=data.balance;updateUI()}
+function allIn(){ data.bet=data.balance; updateUI(); }
 
 /* ===== INIT ===== */
-jackpotRef.onSnapshot(d=>{if(d.exists){jackpotValue=d.data().value;updateUI()}});
+jackpotRef.onSnapshot(d=>{
+ if(d.exists){
+  jackpotValue = d.data().value;
+  updateUI();
+ }
+});
+
 db.collection("players").doc(playerName).get().then(d=>{
  if(d.exists) data={...data,...d.data()};
  else db.collection("players").doc(playerName).set(data);
@@ -287,5 +307,3 @@ db.collection("players").doc(playerName).get().then(d=>{
 </script>
 </body>
 </html>
-
-
