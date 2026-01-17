@@ -269,21 +269,30 @@ db.collection("players").orderBy("balance","desc").limit(10)
 });
 
 /* TIMER + INCOME */
-setInterval(()=>{
- const now=Date.now();
- if(data.balance<5000){
-  const diff=Math.floor((now-data.lastIncome)/INTERVAL);
-  if(diff>0){
-   const income=diff*INCOME_PER_MIN;
-   data.balance+=income;
-   data.lastIncome+=diff*INTERVAL;
-   log(`⏳ Einkommen +${income}€`,"win");
-   db.collection("players").doc(playerName).set(data,{merge:true});
-  }
+setInterval(async () => {
+ const now = Date.now();
+
+ if (data.balance < 5000) {
+   const elapsed = now - data.lastIncome;
+   const cycles = Math.floor(elapsed / INTERVAL);
+
+   if (cycles > 0) {
+     const income = cycles * INCOME_PER_MIN;
+     data.balance = Math.min(5000, data.balance + income);
+     data.lastIncome += cycles * INTERVAL;
+
+     log(`⏳ Einkommen +${income}€`, "win");
+     await db.collection("players").doc(playerName).set(data, { merge: true });
+   }
+
+   const remaining = Math.max(0, INTERVAL - (now - data.lastIncome));
+   timer.innerText = `⏳ +50€ in ${Math.ceil(remaining / 1000)}s`;
+ } else {
+   timer.innerText = `✅ Maximales Einkommen erreicht`;
  }
- timer.innerText=`⏳ +50€ in ${Math.ceil((INTERVAL-(now-data.lastIncome))/1000)}s`;
+
  updateUI();
-},1000);
+}, 1000);
 
 function randomSym(){return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]}
 
@@ -350,3 +359,4 @@ loadPlayer();
 </script>
 </body>
 </html>
+
