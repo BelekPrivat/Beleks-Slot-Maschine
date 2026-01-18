@@ -197,6 +197,8 @@ position:fixed;bottom:10px;right:10px;
 opacity:.15;border:1px solid black;background:black;color:red;
 border-radius:50%;width:42px;height:42px">⚙️</button>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
 <script>
 firebase.initializeApp({
  apiKey:"AIzaSyBqJub5JZstuXNlemSLc9HFziEs11gA70k",
@@ -204,136 +206,128 @@ firebase.initializeApp({
  projectId:"slot-site-dce13"
 });
 
-const db=firebase.firestore();
-const jackpotRef=db.collection("game").doc("jackpot");
+const auth = firebase.auth();
+const db = firebase.firestore();
+const jackpotRef = db.collection("game").doc("jackpot");
 
-const SYMBOLS=["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
-const PAYTABLE={"🍒":10,"🍋":30,"🍊":50,"🔔":75,"⭐":100,"7️⃣":150};
+/* ===== LOGIN ===== */
+auth.onAuthStateChanged(async user => {
+ if(!user){
+  const email = prompt("E-Mail:");
+  const pass  = prompt("Passwort:");
+  try{
+   await auth.signInWithEmailAndPassword(email, pass);
+  }catch{
+   alert("Login fehlgeschlagen");
+  }
+  return;
+ }
 
-const INCOME_PER_MIN=50,INTERVAL=60000;
-const winLogEl=document.getElementById("winLog");
+ window.playerUID = user.uid;
+ checkAdmin();
+ loadPlayer();
+});
 
-let playerName=localStorage.getItem("player_name")||prompt("Spielername:");
-localStorage.setItem("player_name",playerName);
+/* ===== ADMIN CHECK ===== */
+async function checkAdmin(){
+ const doc = await db.collection("admins").doc(playerUID).get();
+ if(doc.exists){
+  document.getElementById("modMenu").style.display = "block";
+ }
+}
 
+/* ===== PLAYER ===== */
 let data={balance:5000,bet:50,lastIncome:Date.now()};
 let jackpotValue=5000,spinning=false,winLog=[];
 
-/* ===== MOD MENU LOGIK ===== */
-const MOD_PASSWORD="BsMkTe321";
-function openModMenu(){
- if(prompt("Mod Passwort:")===MOD_PASSWORD)
-  document.getElementById("modMenu").style.display="block";
+async function loadPlayer(){
+ const ref = db.collection("players").doc(playerUID);
+ const snap = await ref.get();
+ if(snap.exists) data={...data,...snap.data()};
+ else await ref.set(data);
+ updateUI();
 }
+
+/* ===== MOD MENU ===== */
 async function modSetJackpot(){
  const v=parseInt(modJackpot.value);
  if(!isNaN(v)) await jackpotRef.set({value:v});
 }
+
 async function modMoney(){
  const ref=db.collection("players").doc(modPlayer.value);
  const d=await ref.get();
  if(d.exists){
-  let x=d.data();x.balance=Math.max(0,x.balance+parseInt(modAmount.value||0));
+  let x=d.data();
+  x.balance=Math.max(0,x.balance+parseInt(modAmount.value||0));
   await ref.set(x,{merge:true});
  }
 }
+
 async function modResetPlayers(){
  const s=await db.collection("players").get();
  s.forEach(d=>d.ref.delete());
 }
 
-/* ===== RESTLICHER CODE UNVERÄNDERT ===== */
-jackpotRef.onSnapshot(d=>{if(d.exists){jackpotValue=d.data().value;updateUI()}});
-async function loadPlayer(){
- const r=db.collection("players").doc(playerName);
- const d=await r.get();
- if(d.exists)data={...data,...d.data()}; else await r.set(data);
- updateUI();
-}
-db.collection("players").orderBy("balance","desc").limit(10)
-.onSnapshot(s=>{
- leaderboardList.innerHTML="";
- let i=1;
- s.forEach(d=>{
-  let c=i==1?"lb-1":i==2?"lb-2":i==3?"lb-3":"";
-  if(d.id==playerName)c+=" lb-self";
-  leaderboardList.innerHTML+=`<div class="${c}"><span>${i}. ${d.id}</span><span>${d.data().balance} €</span></div>`;
-  i++;
- });
+/* ===== JACKPOT ===== */
+jackpotRef.onSnapshot(d=>{
+ if(d.exists){ jackpotValue=d.data().value; updateUI(); }
 });
 
-setInterval(async()=>{
- const now=Date.now();
- if(data.balance<5000){
-  const diff=Math.floor((now-data.lastIncome)/INTERVAL);
-  if(diff>0){
-   data.balance=Math.min(5000,data.balance+diff*INCOME_PER_MIN);
-   data.lastIncome+=diff*INTERVAL;
-   log(`⏳ Einkommen +${diff*INCOME_PER_MIN}€`,"win");
-   await db.collection("players").doc(playerName).set(data,{merge:true});
-  }
-  timer.innerText=`⏳ +50€ in ${Math.ceil(Math.max(0,INTERVAL-(now-data.lastIncome))/1000)}s`;
- }else timer.innerText="✅ Maximales Einkommen erreicht";
- updateUI();
-},1000);
+/* ===== GAME ===== */
+function randomSym(){return ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"][Math.floor(Math.random()*7)]}
 
-function randomSym(){return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]}
 async function spin(){
  if(spinning||data.balance<data.bet)return;
  spinning=true;
  data.balance-=data.bet;
  jackpotValue+=data.bet;
  await jackpotRef.set({value:jackpotValue});
+
  const f1=randomSym(),f2=randomSym(),f3=randomSym();
-animate(r1, f1, 600);
-animate(r2, f2, 800);
-animate(r3, f3, 1000);
-setTimeout(async()=>{
+ animate(r1,f1,600); animate(r2,f2,800); animate(r3,f3,1000);
+
+ setTimeout(async()=>{
   if(f1===f2&&f2===f3){
    if(f1==="💎"){
-    data.balance+=jackpotValue; jackpotValue=5000;
+    data.balance+=jackpotValue;
+    jackpotValue=5000;
     await jackpotRef.set({value:jackpotValue});
     log(`💎 JACKPOT +${jackpotValue}€`,"jackpot");
    }else{
-    const w=data.bet*PAYTABLE[f1];
-    data.balance+=w; log(`🎉 ${f1}${f2}${f3} +${w}€`,"win");
+    const w=data.bet*({"🍒":10,"🍋":30,"🍊":50,"🔔":75,"⭐":100,"7️⃣":150}[f1]);
+    data.balance+=w;
+    log(`🎉 +${w}€`,"win");
    }
   }else log("❌ Kein Gewinn","lose");
-  await db.collection("players").doc(playerName).set(data,{merge:true});
+
+  await db.collection("players").doc(playerUID).set(data,{merge:true});
   updateUI(); spinning=false;
  },1100);
 }
-    
-function animate(reel, finalSymbol, duration){
- const start = Date.now();
- const interval = setInterval(()=>{
-  reel.innerText = randomSym();
-  if(Date.now() - start >= duration){
-   clearInterval(interval);
-   reel.innerText = finalSymbol;
+
+function animate(reel,finalSymbol,duration){
+ const start=Date.now();
+ const i=setInterval(()=>{
+  reel.innerText=randomSym();
+  if(Date.now()-start>=duration){
+   clearInterval(i); reel.innerText=finalSymbol;
   }
  },70);
 }
 
 function log(t,type){
- winLog.unshift(`<div class="log-entry ${type=='win'?'log-win':type=='lose'?'log-lose':'log-jackpot'}">${t}</div>`);
+ winLog.unshift(`<div class="log-entry ${type}">${t}</div>`);
  winLog=winLog.slice(0,12);
  winLogEl.innerHTML=winLog.join("");
 }
+
 function updateUI(){
- status.innerText=`👤 ${playerName}`;
  jackpot.innerText=`💎 JACKPOT: ${jackpotValue} €`;
  playerInfo.innerText=`💰 ${data.balance} € | 🎯 Einsatz ${data.bet} €`;
 }
-function setBet(){
- const v=parseInt(prompt("Einsatz:",data.bet));
- if(v>=50&&v<=data.balance)data.bet=v;
-}
-function allIn(){
- if(data.balance<=0)return alert("❌ Kein Guthaben");
- data.bet=data.balance;
-}
-loadPlayer();
 </script>
+
 </body>
 </html>
+
