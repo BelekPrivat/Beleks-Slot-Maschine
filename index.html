@@ -42,61 +42,203 @@ h1{color:gold;font-size:2.6rem;text-shadow:0 0 12px gold}
 </head>
 
 <body>
+<div id="layout">
+<div id="app">
+<div id="gameCard">
+<h1>🎰 Belek´s Slot-Maschine 🎰</h1>
+<div id="status" class="status"></div>
+<div id="jackpot" class="jackpot"></div>
+<div id="timer" class="status"></div>
 
-<button onclick="spin()">▶ SPIN</button>
-<div id="reels">
- <span id="r1">❔</span>
- <span id="r2">❔</span>
- <span id="r3">❔</span>
+<div class="reels">
+<div class="reel" id="r1">❔</div>
+<div class="reel" id="r2">❔</div>
+<div class="reel" id="r3">❔</div>
 </div>
-<div id="info"></div>
+
+<div class="controls">
+<button onclick="setBet()">🎯 Einsatz</button>
+<button class="allin" onclick="allIn()">💥 ALL IN</button>
+<button class="spin" onclick="spin()">▶ SPIN</button>
+</div>
+
+<div id="playerInfo" class="player-info"></div>
+</div>
+</div>
+
+<div id="right">
+<div class="panel"><h3>🏆 Leaderboard</h3><div id="leaderboardList"></div></div>
+<div class="panel"><h3>🧾 Gewinne</h3><div id="winLog"></div></div>
+
+ <div class="panel" id="paytable">
+<h3>📊 Paytable</h3>
+<table>
+<tr><th>Kombi</th><th>x</th></tr>
+<tr><td>🍒🍒🍒</td><td>10</td></tr>
+<tr><td>🍋🍋🍋</td><td>30</td></tr>
+<tr><td>🍊🍊🍊</td><td>50</td></tr>
+<tr><td>🔔🔔🔔</td><td>75</td></tr>
+<tr><td>⭐⭐⭐</td><td>100</td></tr>
+<tr><td>7️⃣7️⃣7️⃣</td><td>150</td></tr>
+<tr><td>💎💎💎</td><td>JACKPOT</td></tr>
+</table>
+</div>
+</div>
+</div>
 
 <script>
 firebase.initializeApp({
-  apiKey: "DEIN_API_KEY",
-  authDomain: "DEIN_PROJEKT.firebaseapp.com",
-  projectId: "DEIN_PROJEKT",
+ apiKey: "AIzaSyA8LYHHlfOwdODHC5Eo-hzWM5pABvvJJlY",
+  authDomain: "slot-maschine-2.firebaseapp.com",
+  projectId: "slot-maschine-2",
 });
+const db=firebase.firestore();
+ 
+const winLogEl = document.getElementById("winLog");
 
-const db = firebase.firestore();
-const functions = firebase.functions();
+const jackpotRef=db.collection("game").doc("jackpot");
 
-let playerName = localStorage.getItem("player_name");
-if(!playerName){
- playerName = prompt("Spielername:");
- localStorage.setItem("player_name", playerName);
+const SYMBOLS=["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"];
+const PAYTABLE={"🍒":10,"🍋":30,"🍊":50,"🔔":75,"⭐":100,"7️⃣":150};
+
+const INCOME_PER_MIN=50,INTERVAL=60000;
+
+let playerName=localStorage.getItem("player_name")||prompt("Spielername:");
+localStorage.setItem("player_name",playerName);
+
+let data={balance:5000,bet:50,lastIncome:Date.now()};
+let jackpotValue=5000,spinning=false;
+let winLog=[];
+
+/* ===== INITIAL LOAD ===== */
+async function init(){
+ const jp=await jackpotRef.get();
+ if(jp.exists) jackpotValue=jp.data().value;
+ const ref=db.collection("players").doc(playerName);
+ const d=await ref.get();
+ if(d.exists)data={...data,...d.data()};
+ else await ref.set(data);
+ updateUI();
+ loadLeaderboard();
 }
+init();
 
-/* SERVER FUNKTION */
-const spinFn = functions.httpsCallable("spin");
+/* ===== LEADERBOARD (ALLE 5s) ===== */
+async function loadLeaderboard(){
+ const snap=await db.collection("players").orderBy("balance","desc").limit(10).get();
+ leaderboardList.innerHTML="";
+ let i=1;
+ snap.forEach(d=>{
+  let c=i==1?"lb-1":i==2?"lb-2":i==3?"lb-3":"";
+  if(d.id===playerName)c+=" lb-self";
+  leaderboardList.innerHTML+=`<div class="${c}"><span>${i}. ${d.id}</span><span>${d.data().balance} €</span></div>`;
+  i++;
+ });
+}
+setInterval(loadLeaderboard,5000);
 
-/* ANIMATION */
-function animate(el, sym, dur){
- const s = Date.now();
- const i = setInterval(()=>{
-  el.innerText = ["🍒","🍋","🍊","🔔","⭐","7️⃣","💎"][Math.floor(Math.random()*7)];
-  if(Date.now()-s>dur){
-   clearInterval(i);
-   el.innerText = sym;
+/* ===== EINKOMMEN (LOKAL) ===== */
+setInterval(()=>{
+ const now=Date.now();
+ if(data.balance<5000){
+  const diff=Math.floor((now-data.lastIncome)/INTERVAL);
+  if(diff>0){
+   data.balance=Math.min(5000,data.balance+diff*INCOME_PER_MIN);
+   data.lastIncome+=diff*INTERVAL;
+   savePlayer();
   }
- },70);
-}
+  timer.innerText=`⏳ +50€ in ${Math.ceil((INTERVAL-(now-data.lastIncome))/1000)}s`;
+ }else timer.innerText="✅ Maximales Einkommen erreicht";
+ updateUI();
+},1000);
 
+/* ===== SPIN ===== */
+function randomSym(){return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]}
 async function spin(){
+ if(spinning) return;
+ if(data.balance < data.bet){
+  alert("❌ Nicht genug Guthaben");
+  return;
+ }
+
+ spinning = true;
+
  try{
-  const res = await spinFn({ player: playerName, bet: 50 });
+  data.balance -= data.bet;
+  jackpotValue += data.bet;
 
-  const [a,b,c] = res.data.reels;
-  animate(r1,a,600);
-  animate(r2,b,800);
-  animate(r3,c,1000);
+  await jackpotRef.set({value: jackpotValue});
 
-  info.innerText = `💰 ${res.data.balance} € | Gewinn: ${res.data.win}`;
- }catch(e){
-  alert(e.message);
+  const f1=randomSym(), f2=randomSym(), f3=randomSym();
+  animate(r1,f1,600);
+  animate(r2,f2,800);
+  animate(r3,f3,1000);
+
+  setTimeout(async()=>{
+   if(f1===f2 && f2===f3){
+    if(f1==="💎"){
+     const win = jackpotValue;
+     data.balance += win;
+     jackpotValue = 5000;
+     await jackpotRef.set({value: jackpotValue});
+     log(`💎 JACKPOT +${win}€`, "jackpot");
+    } else {
+     const win = data.bet * PAYTABLE[f1];
+     data.balance += win;
+     log(`🎉 Gewinn +${win}€`, "win");
+    }
+   } else {
+    log("❌ Kein Gewinn", "lose");
+   }
+
+   await savePlayer();
+   updateUI();
+   spinning = false;
+  },1100);
+
+ } catch(e){
+  console.error(e);
+  spinning = false;
  }
 }
-</script>
 
+
+/* ===== UTIL ===== */
+function animate(reel,sym,d){
+ const s=Date.now();
+ const i=setInterval(()=>{
+  reel.innerText=randomSym();
+  if(Date.now()-s>=d){clearInterval(i);reel.innerText=sym;}
+ },70);
+}
+function log(text, type){
+ let cls = "log-win";
+ if(type==="lose") cls="log-lose";
+ if(type==="jackpot") cls="log-jackpot";
+
+ winLog.unshift(`<div class="log-entry ${cls}">${text}</div>`);
+ winLog = winLog.slice(0,12);
+ winLogEl.innerHTML = winLog.join("");
+}
+function updateUI(){
+ status.innerText=`👤 ${playerName}`;
+ jackpot.innerText=`💎 JACKPOT: ${jackpotValue} €`;
+ playerInfo.innerText=`💰 ${data.balance} € | 🎯 Einsatz ${data.bet} €`;
+}
+function setBet(){
+ const v=parseInt(prompt("Einsatz:",data.bet));
+ if(v>=50&&v<=data.balance)data.bet=v;
+}
+function allIn(){
+ if(data.balance<50)return alert("❌ Kein Guthaben");
+ data.bet=data.balance;
+}
+async function savePlayer(){
+ await db.collection("players")
+ .doc(playerName)
+ .set(data,{merge:true});
+}
+
+</script>
 </body>
 </html>
